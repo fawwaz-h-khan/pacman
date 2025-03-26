@@ -1,6 +1,9 @@
 const path = require('path');
-
 module.exports = {
+	devServer: {
+	  host: '0.0.0.0',
+	  allowedHosts: ['all'] // or use 'auto' for slight more security
+},
   entry: "./src/index.js",
   output: {
     path: path.join(__dirname, '/dist'),
@@ -26,6 +29,6 @@ module.exports = {
         loader : 'file-loader'
       }
     ]
-  }
+   }   
 };
 

@@ -1,0 +1,101 @@
+name: Deploy web app to Azure Static Web Apps
+
+on:
+  push:
+    branches:
+      - master
+      - dev
+      - 'dev-gcp'
+      - st
+      - 'team1'
+      - 'team2'
+      - 'team3'
+      - 'team4'
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    branches:
+      - master
+      - dev
+      - 'dev-gcp'
+      - st
+      - 'team1'
+      - 'team2'
+      - 'team3'
+      - 'team4'
+  workflow_dispatch: # allows manual triggering
+
+env:
+  AZURE_STATIC_WEB_APPS_API_TOKEN_PROD: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_PROD }}
+  AZURE_STATIC_WEB_APPS_API_TOKEN_DEV: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_DEV }}
+  AZURE_STATIC_WEB_APPS_API_TOKEN_DEV_GCP: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_DEV_GCP }}
+  AZURE_STATIC_WEB_APPS_API_TOKEN_ST: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_ST }}
+  AZURE_STATIC_WEB_APPS_API_TOKEN_TEAM1: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_TEAM1 }}
+  AZURE_STATIC_WEB_APPS_API_TOKEN_TEAM2: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_TEAM2 }}
+  AZURE_STATIC_WEB_APPS_API_TOKEN_TEAM3: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_TEAM3 }}
+  AZURE_STATIC_WEB_APPS_API_TOKEN_TEAM4: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_TEAM4 }}
+  AZURE_STATIC_WEB_APPS_API_TOKEN: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_PROD }} # default token
+
+permissions:
+  contents: read
+
+jobs:
+  build_and_deploy_job:
+    permissions:
+      contents: read
+      pull-requests: write
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
+    runs-on: ubuntu-latest
+    name: Build and Deploy Job
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      # step to set the correct api token based on the branch
+      - name: Set Azure API Token for the branch
+        run: |
+          declare -A TOKEN_MAP=(
+            ["master"]="${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_PROD }}"
+            ["dev"]="${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_DEV }}"
+            ["dev-gcp"]="${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_DEV_GCP }}"
+            ["st"]="${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_ST }}"
+            ["team1"]="${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_TEAM1 }}"
+            ["team2"]="${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_TEAM2 }}"
+            ["team3"]="${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_TEAM3 }}"
+            ["team4"]="${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_TEAM4 }}"
+          )
+
+          BRANCH_NAME=${GITHUB_REF#refs/heads/}
+          if [[ -n "${TOKEN_MAP[$BRANCH_NAME]}" ]]; then
+            echo "Using token for $BRANCH_NAME"
+            echo "AZURE_STATIC_WEB_APPS_API_TOKEN=${TOKEN_MAP[$BRANCH_NAME]}" >> $GITHUB_ENV
+          else
+            echo "No matching token for this branch"
+            exit 1
+          fi
+
+      # deploy job
+      - name: Build And Deploy
+        id: builddeploy
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ env.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          repo_token: ${{ secrets.MY_GITHUB_TOKEN }}
+          action: "upload"
+          app_location: "/"
+          api_location: ""
+          app_artifact_location: "/"
+
+  close_pull_request_job:
+    permissions:
+      contents: none
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    name: Close Pull Request Job
+    steps:
+      - name: Close Pull Request
+        id: closepullrequest
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ env.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          action: "close"

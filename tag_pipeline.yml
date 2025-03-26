@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # this pipeline creates a tag
 # it's triggered manually
 
@@ -56,3 +57,62 @@ steps:
     git push origin ${{ parameters.releaseVersion }} # push the new tag to the remote repository
   displayName: 'Checkout Branch, Create and Push Git Tag'
 
+=======
+# this pipeline creates a tag
+# it's triggered manually
+
+trigger: none  # disables automatic triggering of the pipeline
+pr: none       # disables automatic runs for pull requests
+
+parameters:
+- name: releaseVersion        # name of parameter
+  type: string
+  default: 'v1.0.0'           # if nothing is entered it will default to v1.0.0
+  displayName: 'Enter Release Version (e.g., v1.0.0)' # the prompt shown after running
+
+pool:
+  vmImage: 'ubuntu-latest'    # use the latest ubuntu image for the pipeline agent
+
+steps:
+- checkout: self
+  persistCredentials: true
+  fetchDepth: 0   # fetch the full history
+
+# this script finds the most recent tag. If there isn't one it generates release notes from the first commit
+# it then outputs the commit messages between the last tag and the current head into a file called release_notes.txt
+- script: |
+    previous_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "initial commit") # get the most recent tag
+    echo "Previous tag: ${previous_tag}"
+    
+    # check if a previous tag was found or if this is the first release
+    if [ "${previous_tag}" = "initial commit" ]; then
+      echo "No previous tag found. Generating release notes from the beginning of the repository."
+      # get all commit messages from the beginning
+      git log --pretty=format:"* %s" > release_notes.txt
+    else
+      echo "Generating release notes from ${previous_tag} to HEAD."
+      # get commit messages between the previous tag and the current commit
+      git log ${previous_tag}..HEAD --pretty=format:"* %s" > release_notes.txt
+    fi
+    
+    # show the generated release notes
+    echo "Generated Release Notes:"
+    cat release_notes.txt
+  displayName: 'Generate Release Notes'
+
+# publish the generated release notes as a pipeline artifact so that it can be downloaded
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish Release Notes Artifact'
+  inputs:
+    pathToPublish: 'release_notes.txt' # path of the file to publish as an artifact
+    artifactName: 'release-notes'      # name of the artifact
+
+# create and push the git tag using the release version
+- script: |
+    git checkout $(Build.SourceBranchName) # switch to the branch that triggered the build to avoid a detached HEAD
+    echo "Creating release tag: ${{ parameters.releaseVersion }}"
+    git tag ${{ parameters.releaseVersion }} # create a new tag with the release version provided
+    echo "Pushing release tag: ${{ parameters.releaseVersion }}"
+    git push origin ${{ parameters.releaseVersion }} # push the new tag to the remote repository
+  displayName: 'Checkout Branch, Create and Push Git Tag'
+>>>>>>> refs/tags/red
