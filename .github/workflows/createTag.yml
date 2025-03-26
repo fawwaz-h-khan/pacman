@@ -55,7 +55,11 @@ jobs:
         git tag ${{ github.event.inputs.releaseVersion }} # create a new tag with the release version provided
         echo "Pushing release tag: ${{ github.event.inputs.releaseVersion }}"
 <<<<<<< HEAD
+<<<<<<< HEAD
         git push origin ${{ github.event.inputs.releaseVersion }} # push the new tag to remote
 =======
         git push origin ${{ github.event.inputs.releaseVersion }} # push the new tag to remote
 >>>>>>> refs/tags/red
+=======
+        git push origin ${{ github.event.inputs.releaseVersion }} # push the new tag to remote
+>>>>>>> refs/tags/purple

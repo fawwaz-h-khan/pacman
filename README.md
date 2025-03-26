@@ -15,7 +15,6 @@ Pacman VR experience using web framework [A-Frame](https://aframe.io/)
 ```
 npm install
 ```
-
 ### Build for development
 
 ```
